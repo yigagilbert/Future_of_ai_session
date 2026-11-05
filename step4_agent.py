@@ -12,7 +12,7 @@ goal that needs several tools in sequence, plus a system prompt that makes the
 model plan, check its work and finish deliberately.
 
 Run:  python step4_agent.py
-      python step4_agent.py "Prepare a short devotional on patience, with a Luganda summary"
+      python step4_agent.py "I'm going to Mbarara for exams. Teach me 3 Runyankole phrases to encourage my friends."
 """
 
 import asyncio
@@ -22,31 +22,35 @@ from google.genai import types
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client
 
-from fellowship_assistant.config import MODEL, get_client
+from speak_uganda.config import MODEL, get_client
 from step3_mcp_client import SERVER, call_mcp_tool, mcp_tools_to_gemini
 
-MAX_STEPS = 10  # guardrail: never loop forever (and protect your free-tier quota)
+MAX_STEPS = 15  # guardrail: never loop forever (and protect your free-tier quota)
 
 AGENT_INSTRUCTIONS = """
-You are the Fellowship Assistant, an agent that prepares material for a
-Christian student fellowship at Makerere University.
+You are Speak Uganda, an agent that prepares short, practical language lessons
+for university students travelling around Uganda.
 
 How you work:
 1. Start by writing a short numbered PLAN of the steps you will take.
-2. Use tools for every Bible quote and every translation. Never invent scripture
-   or translations from memory.
-3. After each tool result, check it. If a tool returns an error, adapt
-   (e.g. try another reference) instead of giving up.
-4. When the goal is achieved, save the result with save_devotional, then reply
-   with a short summary that starts with "DONE:".
+2. Check the weather for the destination and let it shape your tips
+   (e.g. rain means a phrase about umbrellas or shelter).
+3. Choose useful phrases for the situation. Use translate_text for EVERY phrase.
+   Never write a Ugandan-language translation from memory.
+4. Use speak_text on each translated phrase, in the same language, so the
+   student can hear it. If a tool returns an error, adapt (skip the audio,
+   or say so) instead of giving up.
+5. End the phrasebook with a short blessing for the journey, also translated.
+6. Save everything with save_phrasebook (phrases, translations, audio file
+   paths, weather tip), then reply with a short summary that starts with "DONE:".
 
-Write for university students: warm, practical, about 250 words.
+Be warm and encouraging. Keep the phrasebook short.
 """
 
 DEFAULT_GOAL = (
-    "Prepare this Friday's fellowship devotional on the theme 'faith over fear'. "
-    "Use two Bible passages, write a short reflection and one discussion question, "
-    "include a one-sentence Luganda translation of the key message, and save it."
+    "I'm a Makerere student travelling to Gulu this weekend for a friend's wedding. "
+    "Check the weather, teach me 4 useful Acholi phrases for the trip and the wedding, "
+    "let me hear each one, and save a phrasebook."
 )
 
 
@@ -98,3 +102,4 @@ if __name__ == "__main__":
     print(f"GOAL: {goal}")
     final = asyncio.run(run_agent(goal))
     print("\n" + "=" * 60 + "\nFINAL ANSWER:\n" + final)
+    print("\nAudio files are in output/audio/ and the phrasebook in output/.")

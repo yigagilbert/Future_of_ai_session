@@ -13,7 +13,7 @@ Run:  python step1_llm_basics.py
 
 from google.genai import types
 
-from fellowship_assistant.config import MODEL, get_client
+from speak_uganda.config import MODEL, get_client
 
 client = get_client()
 
@@ -27,15 +27,14 @@ print("1) Simple call:\n", response.text, "\n")
 # --- 2. A system instruction gives the model a role ---------------------------
 config = types.GenerateContentConfig(
     system_instruction=(
-        "You are a friendly assistant for a Christian student fellowship at "
-        "Makerere University. Explain things simply, like a senior student "
-        "talking to a first-year. Keep answers under 100 words."
+        "You are 'Speak Uganda', a cheerful language buddy for university students "
+        "at Makerere. You love Uganda's languages and cultures. Keep answers under 100 words."
     ),
     temperature=0.7,  # 0 = predictable, ~1+ = more creative
 )
 response = client.models.generate_content(
     model=MODEL,
-    contents="Explain the meaning of John 3:16.",
+    contents="How many languages are spoken in Uganda, and which are the biggest?",
     config=config,
 )
 print("2) With a system instruction:\n", response.text, "\n")
@@ -51,8 +50,8 @@ print(
 chat = client.chats.create(model=MODEL, config=config)
 print("4) Chat:")
 for question in [
-    "Give me one verse about courage.",
-    "Why did you choose that one?",  # only makes sense with the history
+    "I'm visiting Gulu next week. Which language is spoken there?",
+    "Teach me how to greet someone in it.",  # only makes sense with the history
 ]:
     reply = chat.send_message(question)
     print(f"   You: {question}\n   AI:  {reply.text}\n")
@@ -60,10 +59,10 @@ for question in [
 # --- 5. The limitation that motivates Step 2 ---------------------------------
 response = client.models.generate_content(
     model=MODEL,
-    contents="Translate 'God is love' into Luganda, and tell me today's verse of the day.",
+    contents="What's the weather in Gulu tomorrow? And say 'Congratulations on your wedding' in Acholi, out loud please.",
 )
-print("5) Asking for things it cannot know or do reliably:\n", response.text)
+print("5) Asking for things it cannot know or do:\n", response.text)
 print(
-    "\n   -> The model may guess. It has no live data and no specialised tools.\n"
+    "\n   -> It has no live weather, may guess the Acholi, and cannot speak.\n"
     "      In Step 2 we give it tools."
 )

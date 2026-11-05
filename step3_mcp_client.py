@@ -9,7 +9,7 @@ What you learn:
   - This client contains no tool code: swap the server and it gets new abilities.
 
         Gemini ◀──▶ MCP client (this file) ◀──MCP──▶ MCP server (step3_mcp_server.py)
-                                                        └──▶ bible-api.com, Sunbird AI
+                                                        └──▶ Open-Meteo, Sunbird AI
 
 Run:  python step3_mcp_client.py
 """
@@ -22,7 +22,7 @@ from google.genai import types
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from fellowship_assistant.config import MODEL, get_client
+from speak_uganda.config import MODEL, get_client
 
 # The client launches the server as a subprocess. By default MCP passes only a
 # minimal environment, so we hand over ours (it contains SUNBIRD_API_KEY).
@@ -82,7 +82,7 @@ async def main():
                 print(f"  - {t.name}: {(t.description or '').splitlines()[0]}")
 
             gemini_tool = mcp_tools_to_gemini(listed.tools)
-            question = "Give me a verse of the day and explain it in two sentences."
+            question = "What's the weather in Jinja tomorrow? Then teach me 'good morning' in Luganda and let me hear it."
             print(f"\nYou: {question}")
             print(f"AI:  {await ask(session, gemini_tool, question)}")
 

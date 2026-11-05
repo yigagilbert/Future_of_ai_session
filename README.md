@@ -1,38 +1,46 @@
-# ✝️ Godly Geeks: Build an AI Fellowship Assistant
+# 🇺🇬 Speak Uganda: build an AI language buddy that talks
 
 **LLM Development · API Integration · MCP Servers · Agentic AI**
 
-Workshop materials from the **CoCIS Christian Fellowship, Makerere University** session on **7 November 2026**, facilitated by **Yiga Gilbert** (Software Engineer, Sunbird AI).
+Workshop materials from the **Godly Geeks Movement** session of the **CoCIS Christian Fellowship, Makerere University**, on **7 November 2026**, facilitated by **Yiga Gilbert** (Software Engineer, Sunbird AI).
 
 <a href="https://colab.research.google.com/github/yigagilbert/Future_of_ai_session/blob/main/notebooks/workshop.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-We build **one project in four steps**. Each step adds one idea from the theme:
+We build **one project in four steps**. By the end, an AI agent checks the weather in Gulu, teaches you Acholi phrases for a friend's wedding and **says them out loud** in a Ugandan voice.
 
 | Step | Theme | What we build | File |
 |---|---|---|---|
 | 1 | **LLM development** | Call Gemini through its API: prompts, system instructions, temperature, tokens, chat | [`step1_llm_basics.py`](step1_llm_basics.py) |
-| 2 | **API integration** | Give the model tools: a Bible API and Sunbird AI translation (function calling) | [`step2_tool_calling.py`](step2_tool_calling.py) |
+| 2 | **API integration** | Give the model tools: weather, Sunbird AI translation and text-to-speech | [`step2_tool_calling.py`](step2_tool_calling.py) |
 | 3 | **MCP servers** | Package the tools as an MCP server so *any* AI app can use them | [`step3_mcp_server.py`](step3_mcp_server.py), [`step3_mcp_client.py`](step3_mcp_client.py) |
-| 4 | **Agentic AI** | Give it a goal ("prepare Friday's devotional") and let it plan and act | [`step4_agent.py`](step4_agent.py) |
+| 4 | **Agentic AI** | Give it a goal ("I'm going to Gulu…") and let it plan and act | [`step4_agent.py`](step4_agent.py) |
 
 ```
-                       ┌──────────────────────────── Step 4: agent loop ─────────────────────────┐
-                       │                                                                          │
-   You ──goal──▶  Gemini (Step 1)  ◀──tool calls (Step 2)──▶  MCP client  ◀──MCP (Step 3)──▶  MCP server
-                                                                                                  ├─▶ bible-api.com
-                                                                                                  ├─▶ Sunbird AI (Luganda, Acholi, …)
-                                                                                                  └─▶ save_devotional → output/*.md
+                    ┌───────────────────────── Step 4: agent loop ─────────────────────────┐
+                    │                                                                       │
+ You ──goal──▶  Gemini (Step 1)  ◀──tool calls (Step 2)──▶  MCP client  ◀──MCP (Step 3)──▶  speak-uganda server
+                                                                                              ├─▶ get_weather     → Open-Meteo (free)
+                                                                                              ├─▶ translate_text  → Sunbird AI
+                                                                                              ├─▶ speak_text      → Sunbird AI text-to-speech 🔊
+                                                                                              └─▶ save_phrasebook → output/*.md
 ```
 
 ---
 
+## 🔑 Keys you need
+
+| Key | Needed for | Get it |
+|---|---|---|
+| `GEMINI_API_KEY` | Everything (the LLM) | Free: https://aistudio.google.com/apikey |
+| `SUNBIRD_API_KEY` | Translation and speech in Ugandan languages | https://api.sunbird.ai (sign up, then create a key) |
+
+Without a Sunbird key, everything still runs: weather works, and the translation and speech tools return a clear "key not set" message, which the agent works around.
+
 ## 🚀 Option A: Run in Google Colab (easiest, nothing to install)
 
 1. Click the **Open in Colab** badge above.
-2. Get a free Gemini API key at **https://aistudio.google.com/apikey**.
-3. In Colab, open the 🔑 **Secrets** panel (left sidebar), add `GEMINI_API_KEY`, and enable notebook access.
-4. *(Optional)* Add `SUNBIRD_API_KEY` for translation into Ugandan languages: **https://api.sunbird.ai**
-5. Run the cells from top to bottom.
+2. Open the 🔑 **Secrets** panel in the left sidebar, add `GEMINI_API_KEY` (and `SUNBIRD_API_KEY`), and enable notebook access.
+3. Run the cells from top to bottom. Audio players appear under the cells that speak.
 
 ## 💻 Option B: Run on your own computer
 
@@ -47,7 +55,7 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env               # Windows: copy .env.example .env
-# then open .env and paste your GEMINI_API_KEY (and optionally SUNBIRD_API_KEY)
+# then open .env and paste your keys
 ```
 
 Run each step from the project folder:
@@ -57,26 +65,29 @@ python step1_llm_basics.py
 python step2_tool_calling.py
 python step3_mcp_client.py         # starts step3_mcp_server.py for you
 python step4_agent.py
-python step4_agent.py "Prepare a short devotional on patience, with a Luganda summary"
+python step4_agent.py "I'm going to Mbarara for exams. Teach me 3 Runyankole phrases to encourage my friends."
 ```
 
-Devotionals the agent saves appear in `output/`.
+Audio files are saved in `output/audio/` and phrasebooks in `output/`.
 
 ---
 
 ## 🔌 Use the MCP server in other AI apps
 
-This is the point of MCP: the server you built in Step 3 works with any MCP-compatible app. Use **absolute paths** in the configs below.
+This is the point of MCP: the server you built in Step 3 works with any MCP-compatible app. Plug it into Claude Desktop and Claude can check Ugandan weather, translate and **speak Luganda**. Use **absolute paths** in the configs below.
 
 **Claude Desktop**: *Settings → Developer → Edit Config* (`claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "fellowship-assistant": {
+    "speak-uganda": {
       "command": "/full/path/to/Future_of_ai_session/.venv/bin/python",
       "args": ["/full/path/to/Future_of_ai_session/step3_mcp_server.py"],
-      "env": { "SUNBIRD_API_KEY": "your-key-here" }
+      "env": {
+        "SUNBIRD_API_KEY": "your-key-here",
+        "OUTPUT_DIR": "/full/path/to/Future_of_ai_session/output"
+      }
     }
   }
 }
@@ -87,7 +98,7 @@ This is the point of MCP: the server you built in Step 3 works with any MCP-comp
 ```json
 {
   "servers": {
-    "fellowship-assistant": {
+    "speak-uganda": {
       "type": "stdio",
       "command": "${workspaceFolder}/.venv/bin/python",
       "args": ["${workspaceFolder}/step3_mcp_server.py"]
@@ -108,9 +119,9 @@ npx @modelcontextprotocol/inspector python step3_mcp_server.py
 
 ```
 Future_of_ai_session/
-├── notebooks/workshop.ipynb      # the live-session notebook (self-contained, Colab-ready)
-├── fellowship_assistant/
-│   ├── tools.py                  # plain Python tools: Bible API, Sunbird translate, save file
+├── notebooks/workshop.ipynb      # the live-session notebook (Colab-ready)
+├── speak_uganda/
+│   ├── tools.py                  # plain Python tools: weather, Sunbird translate + speech, save file
 │   └── config.py                 # loads .env, creates the Gemini client (with retries)
 ├── step1_llm_basics.py
 ├── step2_tool_calling.py
@@ -134,9 +145,12 @@ Future_of_ai_session/
 
 | Problem | Fix |
 |---|---|
-| `429 RESOURCE_EXHAUSTED` | You hit the free-tier rate limit. The client retries automatically; otherwise wait a minute. Limits are listed at https://ai.google.dev/gemini-api/docs/rate-limits |
+| `429 RESOURCE_EXHAUSTED` | You hit Gemini's free-tier rate limit. The client retries automatically; otherwise wait a minute. Limits: https://ai.google.dev/gemini-api/docs/rate-limits |
 | `404 model not found` | Google renamed or retired the model. Set `GEMINI_MODEL` in `.env` (or `MODEL` in the notebook) to a current one from https://ai.google.dev/gemini-api/docs/models |
-| Translation says `SUNBIRD_API_KEY is not set` | Add the key to `.env` / Colab secrets. Everything else works without it. |
+| `SUNBIRD_API_KEY is not set` | Add the key to `.env` / Colab secrets. |
+| Speech is slow the first time | The voice model warms up on first use. Later calls are faster. |
+| A language has no voice | `speak_text` returns Sunbird's error and the agent skips the audio. Translation still works. |
+| Weather fails | Open-Meteo has a per-IP daily limit; the tool falls back to wttr.in automatically. |
 | `ModuleNotFoundError: mcp.server.fastmcp` in other tutorials | Those tutorials use MCP SDK v1. This repo uses v2, where `FastMCP` became `MCPServer`. |
 
 ## 📚 Learn more
@@ -146,13 +160,13 @@ Future_of_ai_session/
 - Model Context Protocol: https://modelcontextprotocol.io
 - MCP Python SDK: https://github.com/modelcontextprotocol/python-sdk
 - Sunbird AI API (Ugandan languages): https://api.sunbird.ai/docs
-- Bible API used here: https://bible-api.com
+- Open-Meteo weather API: https://open-meteo.com
 
 ## 🙏 Credits
 
 Built for the **Godly Geeks Movement**, CoCIS Christian Fellowship, Makerere University.
-Bible text: World English Bible (public domain) and KJV via bible-api.com. Translation: Sunbird AI.
+Translation and speech: Sunbird AI. Weather: Open-Meteo and wttr.in.
 
-> *"Whatever you do, work at it with all your heart, as working for the Lord."* (Colossians 3:23)
+> *"Each one heard their own language being spoken."* (Acts 2:6)
 
 License: [MIT](LICENSE)

@@ -8,8 +8,8 @@ What you learn:
   - The model then writes the final answer using real data.
 
         You ──question──▶ Gemini
-        Gemini ──"please call get_bible_verse('Psalm 23:1')"──▶ Your code
-        Your code ──calls bible-api.com──▶ result
+        Gemini ──"please call get_weather('Gulu')"──▶ Your code
+        Your code ──calls Open-Meteo / Sunbird AI──▶ result
         Your code ──result──▶ Gemini ──final answer──▶ You
 
 Run:  python step2_tool_calling.py
@@ -17,51 +17,61 @@ Run:  python step2_tool_calling.py
 
 from google.genai import types
 
-from fellowship_assistant.config import MODEL, get_client
-from fellowship_assistant.tools import ALL_TOOLS
+from speak_uganda.config import MODEL, get_client
+from speak_uganda.tools import ALL_TOOLS
 
 client = get_client()
 
 # --- 1. Describe the tools to the model --------------------------------------
 # This JSON schema is the "contract". Keep an eye on it: MCP (Step 3) uses
 # exactly the same idea.
+LANG = "ISO 639-3 code: lug=Luganda, ach=Acholi, teo=Ateso, lgg=Lugbara, nyn=Runyankole, swa=Swahili, eng=English"
+
 tool_declarations = [
     types.FunctionDeclaration(
-        name="get_bible_verse",
-        description="Look up a Bible passage by reference, e.g. 'John 3:16' or 'Psalm 23'.",
+        name="get_weather",
+        description="Get the weather forecast for a town or city in Uganda.",
         parameters_json_schema={
             "type": "object",
             "properties": {
-                "reference": {"type": "string", "description": "Bible reference"},
-                "translation": {
-                    "type": "string",
-                    "enum": ["web", "kjv"],
-                    "description": "web (default) or kjv",
-                },
+                "city": {"type": "string", "description": "e.g. Gulu, Jinja, Mbarara"},
+                "days": {"type": "integer", "description": "1 to 7 days, default 3"},
             },
-            "required": ["reference"],
+            "required": ["city"],
         },
     ),
     types.FunctionDeclaration(
         name="translate_text",
-        description="Translate text into a Ugandan/African language using Sunbird AI.",
+        description="Translate English text into a Ugandan language using Sunbird AI.",
         parameters_json_schema={
             "type": "object",
             "properties": {
                 "text": {"type": "string"},
-                "target_language": {
-                    "type": "string",
-                    "description": "ISO 639-3 code, e.g. lug=Luganda, ach=Acholi, nyn=Runyankole",
-                },
+                "target_language": {"type": "string", "description": LANG},
             },
             "required": ["text", "target_language"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="speak_text",
+        description="Speak text aloud in a Ugandan language (Sunbird AI text-to-speech). Saves an audio file.",
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Text already in the target language"},
+                "language": {"type": "string", "description": LANG},
+            },
+            "required": ["text", "language"],
         },
     ),
 ]
 
 config = types.GenerateContentConfig(
     tools=[types.Tool(function_declarations=tool_declarations)],
-    system_instruction="You help a student fellowship. Always use tools for Bible text and translations; never guess them.",
+    system_instruction=(
+        "You are Speak Uganda, a language buddy. Always use tools for weather, translations "
+        "and speech; never guess them. To speak a phrase, translate it first, then speak the translation."
+    ),
 )
 
 
@@ -92,8 +102,8 @@ def ask(question: str) -> str:
 
 if __name__ == "__main__":
     for q in [
-        "What does Psalm 23:1 say? Explain it in one sentence.",
-        "Translate 'God is love' into Luganda.",
+        "Will it rain in Gulu this weekend?",
+        "How do I say 'Thank you very much' in Luganda? Let me hear it.",
     ]:
         print(f"\nYou: {q}")
         print(f"AI:  {ask(q)}")
@@ -101,11 +111,11 @@ if __name__ == "__main__":
     # Bonus: the SDK can run this loop for you. Pass plain Python functions;
     # it reads their type hints and docstrings to build the schema.
     print("\n--- Same thing, with automatic function calling ---")
-    from fellowship_assistant.tools import get_bible_verse, translate_text
+    from speak_uganda.tools import get_weather
 
     auto = client.models.generate_content(
         model=MODEL,
-        contents="Quote Romans 8:28 in KJV.",
-        config=types.GenerateContentConfig(tools=[get_bible_verse, translate_text]),
+        contents="Compare the weather in Jinja and Mbarara for tomorrow.",
+        config=types.GenerateContentConfig(tools=[get_weather]),
     )
     print(auto.text)
