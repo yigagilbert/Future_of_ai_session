@@ -41,8 +41,9 @@ print("2) With a system instruction:\n", response.text, "\n")
 
 # --- 3. Tokens: what you pay for ---------------------------------------------
 usage = response.usage_metadata
+# gemini-2.5-flash "thinks" before answering; those hidden tokens are billed as output too
 print(
-    f"3) Tokens used: prompt={usage.prompt_token_count}, "
+    f"3) Tokens used: prompt={usage.prompt_token_count}, thinking={usage.thoughts_token_count or 0}, "
     f"answer={usage.candidates_token_count}, total={usage.total_token_count}\n"
 )
 
