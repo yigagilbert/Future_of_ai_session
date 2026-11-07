@@ -128,8 +128,7 @@ Future_of_ai_session/
 ├── step3_mcp_server.py
 ├── step3_mcp_client.py
 ├── step4_agent.py
-├── docs/exercises.md             # take-home challenges
-└── docs/facilitator-guide.md     # run-of-show and backup plan for presenters
+└── docs/exercises.md             # take-home challenges
 ```
 
 ## 🧠 Key ideas in one table
@@ -140,6 +139,35 @@ Future_of_ai_session/
 | **Tool calling** | The model *asks* for a function; *your code* runs it and returns the result. |
 | **MCP** | An open standard so any AI app can discover and use your tools ("USB-C for AI tools"). |
 | **Agent** | A loop of think → act → observe until a goal is met, with guardrails (step limits, human review). |
+
+## 💭 Tokens and "thinking"
+
+LLMs read and write in **tokens**, pieces of words. Tokens are what you pay for, and what free-tier rate limits count.
+
+In Step 1 you print the token count of one answer. In one run of the workshop it came out like this:
+
+```
+prompt: 51 | thinking: 437 | answer: 118 | total: 606
+```
+
+Why isn't the total 51 + 118 = 169? Because `gemini-2.5-flash` is a **thinking model**: before it answers, it reasons privately in tokens you never see. Those **thinking tokens** are reported separately as `thoughts_token_count`, and they are **billed as output tokens**. Here they were about three-quarters of the total.
+
+| Field (`response.usage_metadata`) | What it counts |
+|---|---|
+| `prompt_token_count` | Your question plus the system instruction |
+| `thoughts_token_count` | Hidden reasoning before the answer |
+| `candidates_token_count` | The answer you see |
+| `total_token_count` | All of the above |
+
+Thinking makes answers better on hard problems (planning, code, multi-step agents), but it costs tokens and time. For simple questions you can switch it off. On 2.5 Flash, a budget of 0 disables it:
+
+```python
+config = types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(thinking_budget=0),   # no thinking
+)
+```
+
+The amount of thinking varies from run to run, so your numbers will differ. The notebook's Step 1 has both cells, so you can compare the totals yourself.
 
 ## 🛠️ Troubleshooting
 
