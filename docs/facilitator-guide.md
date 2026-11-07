@@ -11,13 +11,25 @@
 | 9:00 | 10 | Welcome, prayer, Acts 2 hook | Title cell | Pentecost: "each one heard their own language". God cares about every language, and so can our tech |
 | 9:10 | 10 | **Show the finished agent first** | Jump to Step 4, run it, **play the audio** | "By 11 AM you'll understand every line of this." |
 | 9:20 | 5 | Setup: everyone gets a Gemini key | Setup cells | Share the Colab link in chat *before* this slide |
-| 9:25 | 15 | **Step 1: LLM basics** | Step 1 | End on the "limitation" cell: no weather, guessed Acholi, no voice |
+| 9:25 | 15 | **Step 1: LLM basics** | Step 1 | Thinking-tokens slide: ask why 51 + 118 ≠ 606 before revealing it (see below). End on the "limitation" cell: no weather, guessed Acholi, no voice |
 | 9:40 | 20 | **Step 2: Tool calling** | Step 2 | Play "Webale nnyo". Pause on `print(r.function_calls)`: the model *asks*, it doesn't *do* |
 | 10:00 | 5 | ☕ Break / Q&A | | |
 | 10:05 | 20 | **Step 3: MCP** | Step 3 | Point out the client has zero tool code. "USB-C for AI tools." Optional: Claude Desktop speaking Luganda |
 | 10:25 | 15 | **Step 4: Agents** | Step 4 | Read the THINK/ACT/OBSERVE trace aloud, play every phrase, take a goal from the audience |
 | 10:40 | 10 | Careers, Sunbird AI, Ugandan-language AI, how to keep learning | Wrap-up | |
 | 10:50 | 10 | Q&A, challenges, closing prayer | Wrap-up | Share the GitHub link |
+
+## Step 1 detail: the thinking-tokens moment
+
+Slide: **"Where did 606 tokens come from?"** (right after "An LLM is text in, text out"). Notebook: the two token cells in Step 1. Budget about 4 minutes.
+
+1. Run the tokens cell. It prints `prompt | thinking | answer | total`.
+2. Before showing the slide, **ask the room**: in the example run the prompt was 51 and the answer 118, so why is the total 606?
+3. Show the slide and reveal: `gemini-2.5-flash` is a *thinking* model. It spent **437 tokens reasoning privately** before answering, about three-quarters of the bill, charged as output tokens.
+4. Run the next cell (`thinking_budget=0`) and compare: the total drops to roughly prompt + answer, and the answer usually comes back faster.
+5. Takeaway: **match the model's effort to the task.** Thinking is worth paying for on hard problems (planning, code, multi-step agents), and wasteful for a simple fact.
+
+Your live numbers will differ from the slide's 51 / 437 / 118 because the amount of thinking varies from run to run. Say so; it reinforces that LLMs aren't deterministic.
 
 ## Pre-session checklist
 
@@ -27,6 +39,7 @@
 - [ ] **Listen to every audio clip.** Check which languages have a voice (`lug`, `ach`, `teo`, `lgg`, `nyn`…) and adjust demo goals if one doesn't
 - [ ] Ask an Acholi speaker to sanity-check the demo phrases if you can
 - [ ] Check the Gemini model name still works (`gemini-2.5-flash`) and the free-tier limits: https://ai.google.dev/gemini-api/docs/rate-limits
+- [ ] Run both Step 1 token cells and note your numbers, so you can compare them with the slide's 51 / 437 / 118
 - [ ] Screen-record the full agent run **with sound** (backup if the API or the network fails)
 - [ ] Send the organisers the Colab link + "create a Gemini key beforehand" instructions to share
 
@@ -41,7 +54,8 @@
 
 | Problem | Do this |
 |---|---|
-| `429` rate limit mid-demo | Client retries automatically. If it persists, switch to the backup key (`os.environ["GEMINI_API_KEY"]=...` then re-create `client`) |
+| `429` rate limit mid-demo | Client retries automatically. If it persists, switch to the backup key: paste it as the value of the `GEMINI_API_KEY` secret in Colab Secrets, then re-run the setup cell |
+| Thinking shows 0 or `None` with thinking on | The model chose not to think for that prompt, or Google changed the default. Re-run once, or ask a harder question ("plan a 3-day trip to Gulu") to show thinking |
 | Audience can't hear audio | Re-share with sound enabled; or download the clip and play it from your phone near the mic |
 | Speech is slow (cold start) | Talk through what's happening: a 3-billion-parameter voice model is waking up |
 | A language has no voice | Great teaching moment: the agent sees the error and adapts. Switch the goal to Luganda |
@@ -51,6 +65,7 @@
 ## Analogies that land
 
 - **LLM** = a very well-read intern who has never left the library
+- **Thinking tokens** = the intern's rough notes before answering: you never see them, but you pay for the paper
 - **Tools** = giving the intern a phone, and now a *voice*
 - **MCP** = a standard phone socket, so any intern in any office can use the same phone lines
 - **Agent** = giving the intern a *goal* ("get me ready for Gulu") instead of step-by-step instructions
