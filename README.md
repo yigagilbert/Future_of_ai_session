@@ -179,7 +179,7 @@ The amount of thinking varies from run to run, so your numbers will differ. The 
 | Speech is slow the first time | The voice model warms up on first use. Later calls are faster. |
 | A language has no voice | `speak_text` returns Sunbird's error and the agent skips the audio. Translation still works. |
 | Weather fails | Free weather services rate-limit shared machines like Colab. The tool tries Open-Meteo, then MET Norway, then wttr.in, and if all fail it returns each service's error. |
-| Translation or speech fails or is slow | The first Sunbird call can take a minute while the model wakes up; the tools retry 3 times. Run the notebook's health-check cell to see the real error.  means the key is wrong. |
+| Translation or speech fails or is slow | The first Sunbird call can take a minute while the model wakes up; the tools retry 3 times. Run the notebook's health-check cell to see the real error. `HTTP 401` means the key is wrong. |
 | `ModuleNotFoundError: mcp.server.fastmcp` in other tutorials | Those tutorials use MCP SDK v1. This repo uses v2, where `FastMCP` became `MCPServer`. |
 
 ## 📚 Learn more
