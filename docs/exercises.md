@@ -15,7 +15,7 @@ Pick one, build it, and share a screenshot, an audio clip or a GitHub link with 
 
 ## 🔴 Advanced
 
-6. **Language of the week.** Build an agent for the fellowship WhatsApp group: every Monday it picks a language, one useful phrase and one Bible verse, translates both, and produces an audio clip.
+6. **Language of the week.** Build an agent for the fellowship WhatsApp group: every Monday it picks a language and one useful phrase, explains what it means, translates it, and produces an audio clip.
 7. **Human in the loop.** Change `step4_agent.py` so it shows you each translation and asks you to type `y` before it generates speech or saves anything. Why is this an important guardrail for agents that *act*?
 8. **Remote MCP server.** Run the server with `mcp.run(transport="streamable-http")` and connect to it over HTTP instead of stdio. Where could you deploy it so your whole class can use it?
 

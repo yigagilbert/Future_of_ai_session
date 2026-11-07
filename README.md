@@ -196,6 +196,4 @@ The amount of thinking varies from run to run, so your numbers will differ. The 
 Built for the **Godly Geeks Movement**, CoCIS Christian Fellowship, Makerere University.
 Translation and speech: Sunbird AI. Weather: Open-Meteo, MET Norway and wttr.in.
 
-> *"Each one heard their own language being spoken."* (Acts 2:6)
-
 License: [MIT](LICENSE)
