@@ -27,6 +27,12 @@ We build **one project in four steps**. By the end, an AI agent checks the weath
 
 ---
 
+## 📊 Slides
+
+The slides from the session: [**From Model to Agent: LLMs, APIs, MCP & Agentic AI** (PDF)](slides/From_Model_to_Agent_LLMs_APIs_MCP_Agentic_AI.pdf)
+
+> **Note:** the MCP slide uses the older MCP Python SDK (v1): `from mcp.server.fastmcp import FastMCP`. The code in this repo uses v2, where it is `from mcp.server.mcpserver import MCPServer`. The idea is the same.
+
 ## 🔑 Keys you need
 
 | Key | Needed for | Get it |
@@ -120,6 +126,7 @@ npx @modelcontextprotocol/inspector python step3_mcp_server.py
 ```
 Future_of_ai_session/
 ├── notebooks/workshop.ipynb      # the live-session notebook (Colab-ready)
+├── slides/                       # the session slides (PDF)
 ├── speak_uganda/
 │   ├── tools.py                  # plain Python tools: weather, Sunbird translate + speech, save file
 │   └── config.py                 # loads .env, creates the Gemini client (with retries)
