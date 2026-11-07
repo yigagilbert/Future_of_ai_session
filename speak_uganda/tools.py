@@ -7,14 +7,17 @@ In Step 3 we publish the exact same functions through an MCP server.
 
 APIs used:
   - Sunbird AI (https://api.sunbird.ai): translation and text-to-speech for Ugandan languages
-  - Open-Meteo (https://open-meteo.com): free weather, no key. wttr.in is the fallback.
+  - Weather, free and no key: Open-Meteo (https://open-meteo.com), with MET Norway
+    (https://api.met.no) and wttr.in as fallbacks, because free services sometimes rate-limit
+    shared machines such as Google Colab.
 """
 
 from __future__ import annotations
 
 import os
 import re
-from datetime import date
+import time
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -22,6 +25,8 @@ import requests
 SUNBIRD_API = "https://api.sunbird.ai"
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "output"))
 TIMEOUT = 30  # seconds
+WEATHER_TIMEOUT = 10  # keep short, so a slow service is skipped quickly
+USER_AGENT = "speak-uganda-workshop/1.0 (github.com/yigagilbert/Future_of_ai_session)"
 
 LANGUAGES = {
     "lug": "Luganda", "ach": "Acholi", "teo": "Ateso", "lgg": "Lugbara",
@@ -57,6 +62,35 @@ def _sunbird_headers() -> dict | None:
     return {"Authorization": f"Bearer {token}"} if token else None
 
 
+def _sunbird_post(path: str, payload: dict, timeout: int):
+    """POST to Sunbird AI, retrying when a model is still starting up ("cold start").
+
+    Returns (response, None) on an answer, or (None, error message) after 3 failed tries.
+    """
+    problem = ""
+    for attempt in range(3):
+        if attempt:
+            time.sleep(5 * attempt)  # give the model a moment to wake up
+        try:
+            r = requests.post(f"{SUNBIRD_API}{path}", headers=_sunbird_headers(), json=payload, timeout=timeout)
+        except requests.Timeout:
+            problem = f"no reply within {timeout}s (the model may still be starting up)"
+            continue
+        except requests.RequestException as e:
+            problem = f"could not connect ({type(e).__name__})"
+            continue
+        if r.status_code in (502, 503, 504):  # model loading or busy: try again
+            problem = f"HTTP {r.status_code}: {r.text[:200]}"
+            continue
+        return r, None
+    return None, f"{problem}, after 3 tries"
+
+
+def _sunbird_error(what: str, r) -> str:
+    hint = " Check that SUNBIRD_API_KEY is correct." if r.status_code in (401, 403) else ""
+    return f"Error from Sunbird {what} (HTTP {r.status_code}): {r.text[:300]}{hint}"
+
+
 # --- Tool 1: weather ---------------------------------------------------------
 def get_weather(city: str, days: int = 3) -> str:
     """Get the weather forecast for a town or city in Uganda.
@@ -88,14 +122,14 @@ def get_weather(city: str, days: int = 3) -> str:
             return f"Error: could not find a place called '{city}' in Uganda. Check the spelling."
         place = geo["results"][0]
 
-    # 2. Get the forecast (Open-Meteo, falling back to wttr.in)
-    try:
-        return _open_meteo(place, days)
-    except Exception:
+    # 2. Get the forecast: try each free service in turn
+    errors = []
+    for name, source in (("Open-Meteo", _open_meteo), ("MET Norway", _met_no), ("wttr.in", _wttr)):
         try:
-            return _wttr(place, days)
+            return source(place, days)
         except Exception as e:
-            return f"Error: no weather service could be reached for '{city}' ({e})."
+            errors.append(f"{name}: {type(e).__name__} {str(e)[:80]}")
+    return f"Error: no weather service answered for '{city}'. Details: " + " | ".join(errors)
 
 
 def _open_meteo(place: dict, days: int) -> str:
@@ -106,7 +140,7 @@ def _open_meteo(place: dict, days: int) -> str:
             "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
             "timezone": "Africa/Kampala", "forecast_days": days,
         },
-        timeout=TIMEOUT,
+        timeout=WEATHER_TIMEOUT,
     )
     r.raise_for_status()
     d = r.json()["daily"]
@@ -120,11 +154,54 @@ def _open_meteo(place: dict, days: int) -> str:
     return "\n".join(lines)
 
 
+_SYMBOL_WORDS = ["partly", "cloudy", "clear", "sky", "fair", "light", "heavy", "rain",
+                 "showers", "and", "thunder", "fog", "sleet", "snow"]
+
+
+def _symbol_text(code: str) -> str:
+    """MET Norway symbol codes look like 'lightrainshowers_day': make them readable."""
+    code, words = code.split("_")[0], []
+    while code:
+        word = next((w for w in _SYMBOL_WORDS if code.startswith(w)), code)
+        words.append(word)
+        code = code[len(word):]
+    return " ".join(words)
+
+
+def _met_no(place: dict, days: int) -> str:
+    r = requests.get(
+        "https://api.met.no/weatherapi/locationforecast/2.0/compact",
+        params={"lat": round(place["latitude"], 3), "lon": round(place["longitude"], 3)},
+        headers={"User-Agent": USER_AGENT},  # MET Norway asks every app to identify itself
+        timeout=WEATHER_TIMEOUT,
+    )
+    r.raise_for_status()
+    by_day: dict = {}
+    for t in r.json()["properties"]["timeseries"]:
+        local = datetime.fromisoformat(t["time"].replace("Z", "+00:00")) + timedelta(hours=3)  # Uganda: UTC+3
+        day = by_day.setdefault(local.date().isoformat(), {"temps": [], "rain": 0.0, "symbol": None})
+        data = t["data"]
+        day["temps"].append(data["instant"]["details"]["air_temperature"])
+        nxt = data.get("next_1_hours") or data.get("next_6_hours")
+        if nxt:
+            day["rain"] += nxt.get("details", {}).get("precipitation_amount", 0.0)
+            if day["symbol"] is None and local.hour >= 9:
+                day["symbol"] = nxt["summary"]["symbol_code"]
+    lines = [f"Weather for {place['name']}, Uganda:"]
+    for date_str, day in list(by_day.items())[:days]:
+        desc = _symbol_text(day["symbol"]) if day["symbol"] else "mixed conditions"
+        lines.append(
+            f"- {date_str}: {desc}, {min(day['temps']):.0f}-{max(day['temps']):.0f}°C, "
+            f"about {day['rain']:.0f} mm of rain expected"
+        )
+    return "\n".join(lines)
+
+
 def _wttr(place: dict, days: int) -> str:
     r = requests.get(
         f"https://wttr.in/{place['latitude']:.3f},{place['longitude']:.3f}",
         params={"format": "j1"},
-        timeout=TIMEOUT,
+        timeout=WEATHER_TIMEOUT,
     )
     r.raise_for_status()
     lines = [f"Weather for {place['name']}, Uganda:"]
@@ -151,18 +228,19 @@ def translate_text(text: str, target_language: str, source_language: str = "eng"
     headers = _sunbird_headers()
     if not headers:
         return "Error: SUNBIRD_API_KEY is not set, so translation is unavailable. Get a key at https://api.sunbird.ai"
+    r, problem = _sunbird_post(
+        "/tasks/translate",
+        {"source_language": source_language, "target_language": target_language, "text": text},
+        timeout=45,
+    )
+    if problem:
+        return f"Error: Sunbird translation failed: {problem}."
+    if r.status_code >= 400:
+        return _sunbird_error("translate", r)
     try:
-        r = requests.post(
-            f"{SUNBIRD_API}/tasks/translate",
-            headers=headers,
-            json={"source_language": source_language, "target_language": target_language, "text": text},
-            timeout=120,  # the model can take a moment on a cold start
-        )
-        if r.status_code >= 400:
-            return f"Error from Sunbird translate ({r.status_code}): {r.text[:300]}"
         return r.json()["output"]["translated_text"]
-    except requests.RequestException as e:
-        return f"Error: the Sunbird API could not be reached ({e})."
+    except (ValueError, KeyError, TypeError):
+        return f"Error: unexpected reply from Sunbird translate: {r.text[:300]}"
 
 
 # --- Tool 3: text-to-speech --------------------------------------------------
@@ -182,15 +260,16 @@ def speak_text(text: str, language: str = "lug") -> str:
     headers = _sunbird_headers()
     if not headers:
         return "Error: SUNBIRD_API_KEY is not set, so speech is unavailable. Get a key at https://api.sunbird.ai"
+    r, problem = _sunbird_post(
+        "/tasks/audio/speech",
+        {"text": text, "language": language, "response_mode": "url"},
+        timeout=90,
+    )
+    if problem:
+        return f"Error: Sunbird speech failed: {problem}."
+    if r.status_code >= 400:
+        return _sunbird_error("speech", r)
     try:
-        r = requests.post(
-            f"{SUNBIRD_API}/tasks/audio/speech",
-            headers=headers,
-            json={"text": text, "language": language, "response_mode": "url"},
-            timeout=180,
-        )
-        if r.status_code >= 400:
-            return f"Error from Sunbird speech ({r.status_code}): {r.text[:300]}"
         info = r.json()
         audio = requests.get(info["audio_url"], timeout=TIMEOUT)
         audio.raise_for_status()
@@ -202,8 +281,8 @@ def speak_text(text: str, language: str = "lug") -> str:
         path = folder / f"{language}-{_slug(text)}{ext}"
         path.write_bytes(audio.content)
         return f"Saved {LANGUAGES.get(language, language)} audio ({info.get('voice', 'default voice')}) to {path}"
-    except (requests.RequestException, KeyError) as e:
-        return f"Error: speech generation failed ({e})."
+    except (requests.RequestException, ValueError, KeyError) as e:
+        return f"Error: speech generation failed ({type(e).__name__}: {e})."
 
 
 # --- Tool 4: save the result -------------------------------------------------
